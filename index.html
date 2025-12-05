@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuis: Seberapa Cinta Anda dengan Uang?</title>
+    <!-- Memuat Tailwind CSS untuk styling modern dan responsif -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Konfigurasi Tailwind untuk warna kustom (emas dan hijau uang) dan font -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'money-green': '#28a745', // Hijau uang/dollar
+                        'rich-gold': '#ffc107',   // Emas
+                        'dark-bg': '#1f2937',     // Background gelap
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Gaya kustom untuk background dan efek hover */
+        body {
+            background-color: #0f172a; /* Warna background sangat gelap */
+            color: #e5e7eb; /* Teks putih keabu-abuan */
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .quiz-container {
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); /* Bayangan dalam */
+            border: 1px solid #374151;
+        }
+        .option-button {
+            transition: all 0.2s ease-in-out;
+        }
+        .option-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(40, 167, 69, 0.3); /* Bayangan hijau saat hover */
+        }
+        /* Canvas Styling - agar responsif */
+        #moneyCanvas {
+            width: 100%;
+            height: 200px; /* Tinggi default untuk canvas */
+            background: linear-gradient(135deg, #1f2937, #0f172a);
+            border-bottom: 2px solid #ffc107;
+        }
+        /* Style untuk loader */
+        .loader {
+            border: 4px solid #f3f3f3; /* Light grey */
+            border-top: 4px solid #ffc107; /* Gold */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="font-sans">
+
+    <div id="quizApp" class="quiz-container bg-dark-bg p-8 md:p-10 rounded-xl">
+        <!-- HEADER DENGAN CANVAS -->
+        <header class="mb-6">
+            <h1 class="text-4xl font-extrabold text-rich-gold text-center mb-2">
+                💰 Kuis Cinta Uang 💰
+            </h1>
+            <p class="text-center text-gray-400 mb-4">Seberapakah Anda Mendambakan Kemakmuran?</p>
+
+            <!-- CANVAS untuk Efek Visual -->
+            <canvas id="moneyCanvas" class="rounded-t-lg"></canvas>
+        </header>
+
+        <!-- AREA KUIS -->
+        <div id="quizArea">
+            <!-- Loading Screen (awal dan saat ganti kuis) -->
+            <div id="loading" class="flex justify-center items-center h-40">
+                <div class="loader"></div>
+            </div>
+
+            <!-- Quiz Content (hidden initially) -->
+            <div id="quizContent" class="hidden">
+                <div id="questionContainer" class="bg-gray-700 p-6 rounded-lg mb-6 shadow-xl">
+                    <p id="questionText" class="text-xl font-semibold text-white"></p>
+                    <div class="text-sm text-gray-400 mt-2" id="questionCounter"></div>
+                </div>
+
+                <div id="optionsContainer" class="space-y-4">
+                    <!-- Tombol Opsi akan di-render di sini -->
+                </div>
+
+                <button id="nextButton" onclick="nextQuestion()" class="mt-8 w-full py-3 bg-money-green hover:bg-green-700 text-white font-bold rounded-lg option-button hidden">
+                    Lanjut ke Pertanyaan Berikutnya
+                </button>
+            </div>
+        </div>
+
+        <!-- AREA HASIL -->
+        <div id="resultsArea" class="hidden text-center p-8 bg-gray-700 rounded-xl mt-8">
+            <h2 class="text-3xl font-bold mb-4 text-rich-gold">Hasil Kuis Anda!</h2>
+            <p id="resultTitle" class="text-2xl font-extrabold mb-4"></p>
+            <p id="resultText" class="text-lg mb-6 text-gray-200"></p>
+            
+            <div id="scoreDisplay" class="text-4xl font-black text-money-green mb-6"></div>
+
+            <button onclick="restartQuiz()" class="py-3 px-6 bg-rich-gold hover:bg-yellow-600 text-dark-bg font-bold rounded-lg option-button">
+                Coba Lagi
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- Konfigurasi Kuis ---
+        // Pertanyaan disesuaikan untuk pelajar
+        const quizData = [
+            {
+                question: "Ketika menerima uang saku harian/mingguan, apa yang pertama Anda lakukan?",
+                options: [
+                    { text: "Langsung dibagi ke dalam amplop/rekening (Tabungan, Jajan, Kebutuhan Sekolah)", score: 10 },
+                    { text: "Langsung dibelikan makanan/minuman yang lagi viral", score: 3 },
+                    { text: "Disimpan saja di dompet sampai mau jajan", score: 6 },
+                    { text: "Dipakai untuk bayar iuran atau kebutuhan sekolah yang penting dulu", score: 8 }
+                ]
+            },
+            {
+                question: "Anda ingin membeli konsol game baru, tetapi uang saku Anda tidak cukup. Apa reaksi Anda?",
+                options: [
+                    { text: "Mulai membuat rencana, mengurangi jajan, dan menabung khusus untuk itu", score: 10 },
+                    { text: "Minta dibelikan orang tua, atau merengek sampai dapat", score: 2 },
+                    { text: "Cari alternatif yang lebih murah atau pinjam punya teman", score: 5 },
+                    { text: "Mencari pekerjaan sampingan atau peluang menghasilkan uang (misal: jasa desain, jualan kecil)", score: 9 }
+                ]
+            },
+            {
+                question: "Jika Anda mendapat uang hadiah dari lomba/saudara, bagaimana Anda memanfaatkannya?",
+                options: [
+                    { text: "Ditabung seluruhnya untuk biaya kuliah/masa depan yang jauh", score: 10 },
+                    { text: "Dipakai untuk beli barang mahal yang keren (sepatu branded, dll.)", score: 4 },
+                    { text: "Dipakai untuk beli buku, kursus online, atau alat penunjang skill baru", score: 8 },
+                    { text: "Dibagi-bagi ke teman-teman sebagai traktiran besar", score: 6 }
+                ]
+            },
+            {
+                question: "Mana yang lebih menarik bagi Anda?",
+                options: [
+                    { text: "Mempunyai penampilan terbaik dan selalu update fashion terbaru di sekolah", score: 4 },
+                    { text: "Memiliki tabungan terbesar di antara teman-teman sebaya", score: 9 },
+                    { text: "Menguasai banyak skill atau pengetahuan di luar kurikulum sekolah", score: 6 },
+                    { text: "Selalu bisa mentraktir teman-teman saat kumpul", score: 5 }
+                ]
+            },
+            {
+                question: "Seberapa sering Anda memeriksa atau menghitung sisa uang saku/tabungan Anda?",
+                options: [
+                    { text: "Setiap hari atau setiap selesai bertransaksi", score: 10 },
+                    { text: "Setiap minggu, saat uang saku baru masuk", score: 7 },
+                    { text: "Saat benar-benar butuh atau uangnya sudah menipis", score: 4 },
+                    { text: "Tidak pernah, tahu-tahu habis saja", score: 1 }
+                ]
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let totalScore = 0;
+        let selectedOptionScore = 0; // Menyimpan skor pilihan saat ini
+
+        const quizContent = document.getElementById('quizContent');
+        const loadingScreen = document.getElementById('loading');
+        const questionText = document.getElementById('questionText');
+        const questionCounter = document.getElementById('questionCounter');
+        const optionsContainer = document.getElementById('optionsContainer');
+        const nextButton = document.getElementById('nextButton');
+        const resultsArea = document.getElementById('resultsArea');
+        const quizArea = document.getElementById('quizArea');
+        const resultTitle = document.getElementById('resultTitle');
+        const resultText = document.getElementById('resultText');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+
+
+        // --- Fungsi Utama Kuis ---
+
+        // Menampilkan pertanyaan saat ini
+        function loadQuestion() {
+            // Tampilkan loading sebentar untuk efek transisi
+            quizContent.classList.add('hidden');
+            loadingScreen.classList.remove('hidden');
+
+            setTimeout(() => {
+                const q = quizData[currentQuestionIndex];
+                questionText.textContent = q.question;
+                questionCounter.textContent = `Pertanyaan ${currentQuestionIndex + 1} dari ${quizData.length}`;
+                optionsContainer.innerHTML = '';
+                nextButton.classList.add('hidden');
+                selectedOptionScore = 0; // Reset skor pilihan
+
+                q.options.forEach((option, index) => {
+                    const button = document.createElement('button');
+                    button.textContent = option.text;
+                    button.className = 'option-button w-full text-left py-3 px-4 bg-gray-600 hover:bg-money-green text-white font-medium rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-rich-gold focus:ring-opacity-50';
+                    button.onclick = () => selectOption(button, option.score);
+                    optionsContainer.appendChild(button);
+                });
+
+                // Sembunyikan loading dan tampilkan konten kuis
+                loadingScreen.classList.add('hidden');
+                quizContent.classList.remove('hidden');
+            }, 500); // Penundaan 500ms
+        }
+
+        // Dipanggil saat tombol opsi dipilih
+        function selectOption(selectedButton, score) {
+            // Hapus style dari semua tombol
+            Array.from(optionsContainer.children).forEach(button => {
+                button.classList.remove('bg-rich-gold', 'ring-2', 'ring-rich-gold');
+                button.classList.add('bg-gray-600');
+            });
+
+            // Beri style ke tombol yang dipilih
+            selectedButton.classList.remove('bg-gray-600');
+            selectedButton.classList.add('bg-rich-gold', 'ring-2', 'ring-rich-gold');
+
+            selectedOptionScore = score;
+            nextButton.classList.remove('hidden'); // Tampilkan tombol Lanjut
+        }
+
+        // Pindah ke pertanyaan berikutnya atau tampilkan hasil
+        function nextQuestion() {
+            if (selectedOptionScore === 0) {
+                // Seharusnya tidak terjadi karena tombol Lanjut disembunyikan jika belum memilih
+                return;
+            }
+
+            totalScore += selectedOptionScore;
+            currentQuestionIndex++;
+
+            if (currentQuestionIndex < quizData.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        // Menampilkan hasil akhir
+        function showResults() {
+            quizArea.classList.add('hidden');
+            resultsArea.classList.remove('hidden');
+
+            let title, text, color;
+
+            // Logika untuk konversi skor ke basis 100
+            const maxPossibleScore = quizData.length * 10; // Skor maksimum (saat ini 50)
+            // Skor yang disesuaikan ke basis 100
+            const finalPercentageScore = Math.round((totalScore / maxPossibleScore) * 100);
+
+            // Tentukan kategori hasil berdasarkan finalPercentageScore
+            if (finalPercentageScore >= 90) { // Skor 90-100 (45-50 poin)
+                title = "Calon Konglomerat Muda! 👑";
+                text = "Anda memiliki kebiasaan keuangan yang sangat dewasa dan berorientasi masa depan, jauh di atas rata-rata pelajar. Anda tahu cara menabung, merencanakan, dan memprioritaskan. Pertahankan mentalitas ini, masa depan finansial Anda sangat cerah!";
+                color = "text-money-green";
+            } else if (finalPercentageScore >= 60) { // Skor 60-89 (30-44 poin)
+                title = "Pencari Kemakmuran (Skor Menengah) ✨";
+                text = "Anda menyadari pentingnya uang dan cukup disiplin dalam mengelolanya. Anda tahu cara menabung, tetapi godaan jajan dan tren mungkin sesekali mengganggu rencana Anda. Sedikit lebih fokus dan disiplin akan membawa Anda jauh!";
+                color = "text-rich-gold";
+            } else { // Skor < 60 (0-29 poin)
+                title = "Si Santai Penuh Gaya (Skor Rendah) 💖";
+                text = "Uang saku Anda tampaknya lebih sering habis untuk kesenangan saat ini. Anda cenderung memprioritaskan gaya hidup dan sosial daripada tabungan jangka panjang. Ingat, disiplin finansial sejak muda adalah kunci kemerdekaan di masa depan!";
+                color = "text-red-400";
+            }
+
+            resultTitle.textContent = title;
+            resultTitle.className = `text-2xl font-extrabold mb-4 ${color}`;
+            resultText.textContent = text;
+            // Menampilkan skor dalam format 0/100
+            scoreDisplay.textContent = `${finalPercentageScore} / 100`;
+
+            // Panggil fungsi visualisasi hasil
+            drawResultVisual(finalPercentageScore);
+        }
+
+        // Mulai ulang kuis
+        function restartQuiz() {
+            currentQuestionIndex = 0;
+            totalScore = 0;
+            selectedOptionScore = 0;
+            resultsArea.classList.add('hidden');
+            quizArea.classList.remove('hidden');
+            loadQuestion();
+        }
+
+
+        // --- Fungsi Canvas untuk Efek Visual ---
+
+        const canvas = document.getElementById('moneyCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+
+        // Partikel Uang
+        class MoneyParticle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 1.5; // Kecepatan X
+                this.vy = (Math.random() * -1.5) - 0.5; // Kecepatan Y (naik)
+                this.size = Math.random() * 8 + 4;
+                this.color = color; // Bisa hijau atau emas
+                this.alpha = 1;
+                this.gravity = 0.05; // Sedikit gravitasi
+                this.angle = Math.random() * Math.PI * 2;
+                this.rotationSpeed = (Math.random() - 0.5) * 0.05;
+            }
+
+            update() {
+                this.vy += this.gravity;
+                this.x += this.vx;
+                this.y += this.vy;
+                this.alpha -= 0.015; // Memudar
+                this.angle += this.rotationSpeed;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+
+                // Gambar bentuk uang/koin sederhana
+                if (this.color === '#ffc107') { // Koin Emas (Lingkaran)
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                } else { // Uang Kertas Hijau (Persegi panjang)
+                    ctx.fillRect(-this.size / 2, -this.size / 4, this.size, this.size / 2);
+                }
+                ctx.restore();
+            }
+        }
+
+        let particles = [];
+        let animationFrameId;
+        const maxParticles = 60; // Batas partikel
+
+        // Menyesuaikan ukuran canvas saat window di-resize
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            width = canvas.width = rect.width;
+            height = canvas.height = rect.height;
+        }
+
+        // Loop Animasi Canvas
+        function animateCanvas() {
+            animationFrameId = requestAnimationFrame(animateCanvas);
+            
+            // Bersihkan kanvas, tambahkan sedikit trail/blur effect
+            ctx.fillStyle = 'rgba(31, 41, 55, 0.2)'; // Warna dark-bg, dengan alpha 0.2
+            ctx.fillRect(0, 0, width, height);
+
+            // Tambahkan partikel baru secara bertahap jika di awal atau saat hasil
+            if (particles.length < maxParticles) {
+                if (Math.random() < 0.3) {
+                     const color = Math.random() > 0.5 ? '#ffc107' : '#28a745';
+                     particles.push(new MoneyParticle(width * Math.random(), height, color));
+                }
+            }
+
+            // Update dan gambar partikel
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+
+                // Hapus partikel yang sudah pudar atau keluar batas
+                if (particles[i].alpha < 0 || particles[i].y < 0) {
+                    particles.splice(i, 1);
+                    i--;
+                }
+            }
+        }
+        
+        // Visualisasi Hasil di Canvas (Opsional: mengubah gaya)
+        function drawResultVisual(score) {
+            // score sekarang adalah persentase (0-100)
+            particles = []; // Bersihkan partikel lama
+            const maxScore = 100; // Karena kita sudah konversi ke basis 100
+            const percentage = score / maxScore;
+
+            let particleCount = 20 + Math.floor(percentage * 50); // Partikel lebih banyak jika skor tinggi
+
+            for(let i = 0; i < particleCount; i++) {
+                const color = Math.random() > 0.5 ? '#ffc107' : '#28a745';
+                const x = width / 2;
+                const y = height * 0.8;
+                const p = new MoneyParticle(x, y, color);
+                
+                // Beri kecepatan awal yang lebih besar untuk efek 'ledakan' hasil
+                p.vx = (Math.random() - 0.5) * (3 + percentage * 5);
+                p.vy = (Math.random() * -3) - (percentage * 5);
+                p.gravity = 0.08;
+                particles.push(p);
+            }
+        }
+
+        // --- Inisialisasi Aplikasi ---
+        window.addEventListener('resize', resizeCanvas);
+
+        window.onload = function() {
+            resizeCanvas(); // Set ukuran awal
+            animateCanvas(); // Mulai animasi
+            loadQuestion(); // Mulai kuis
+        }
+
+    </script>
+</body>
+</html>
